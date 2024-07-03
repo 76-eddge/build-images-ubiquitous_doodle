@@ -1,0 +1,50 @@
+name: Build
+
+on:
+  push:
+    branches: ['**']
+    tags-ignore: ['**']
+  release:
+    types: [published]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        tag:
+        - ubiquitous_doodle-gradle
+
+    steps:
+    - uses: actions/checkout@v3
+    - uses: jlumbroso/free-disk-space@main
+    - uses: docker/setup-buildx-action@v2
+
+    - name: Build Docker Image
+      uses: docker/build-push-action@v3
+      with:
+        cache-from: type=gha,scope=${{ matrix.tag }}
+        cache-to: type=gha,ignore-error=true,mode=max,scope=${{ matrix.tag }}
+        context: ${{ matrix.tag }}
+        outputs: type=docker
+        tags: 76eddge/build-images:${{ matrix.tag }}
+        target: deploy
+
+    - name: Push Docker Image
+      run: |
+        echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login --username 76eddge --password-stdin
+        docker push -a 76eddge/build-images
+
+    - name: Run Grype Scan
+      if: github.event_name != 'release'
+      run: docker run --rm -v /var/run/docker.sock:/var/run/docker.sock anchore/grype -o sarif docker:76eddge/build-images:${{ matrix.tag }} > ${{ matrix.tag }}.sarif
+
+    - name: Upload Grype Scan Results
+      if: github.event_name != 'release'
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ${{ matrix.tag }}.sarif
+        category: ${{ matrix.tag }}

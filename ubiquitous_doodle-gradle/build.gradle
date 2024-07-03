@@ -1,0 +1,25 @@
+plugins {
+	id 'java'
+}
+
+apply plugin: 'jacoco'
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	compileOnly 'javax.xml.bind:jaxb-api:2.3.+'
+	implementation 'org.glassfish.jaxb:jaxb-runtime:2.3.+'
+	testImplementation 'org.junit.jupiter:junit-jupiter:5.+'
+}
+
+task resolveDependencies {
+	doLast {
+		configurations.all {
+			if (it.canBeResolved) {
+				it.resolve()
+			}
+		}
+	}
+}
