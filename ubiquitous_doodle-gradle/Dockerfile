@@ -2,7 +2,7 @@
 FROM alpine AS deploy
 
 # Install build dependencies
-RUN apk add --no-cache curl file git git-lfs sed xz
+RUN apk add --no-cache curl file git git-lfs sed sudo xz
 
 # Install JDK, gradle, maven, and sonar-scanner from latest-stable for security fixes
 RUN apk add --no-cache -X https://dl-cdn.alpinelinux.org/alpine/latest-stable/community openjdk17-jdk && \
@@ -13,7 +13,11 @@ RUN apk add --no-cache -X https://dl-cdn.alpinelinux.org/alpine/latest-stable/co
 	apk add --no-cache -X http://dl-cdn.alpinelinux.org/alpine/edge/testing sonar-scanner
 
 # Perform tasks as basic user
-RUN adduser --disabled-password jenkins
+RUN adduser --disabled-password jenkins && \
+	mkdir -p /etc/sudoers.d && \
+	echo "jenkins ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/jenkins && \
+	chmod 0440 /etc/sudoers.d/jenkins
+
 USER jenkins
 WORKDIR /home/jenkins
 
